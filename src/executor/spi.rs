@@ -72,7 +72,6 @@ pub const SPI_OPT_NONATOMIC: i32 = (1 << 0);
 
 pub mod c {
     use super::*;
-    use libc::*;
     extern "C" {
         pub static SPI_processed: u64;
         pub static SPI_tuptable: *mut SPITupleTable;
