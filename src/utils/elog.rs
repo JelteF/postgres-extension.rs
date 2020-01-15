@@ -116,6 +116,8 @@ const fn make_sqlstate(ch1: char, ch2: char, ch3: char, ch4: char, ch5: char) ->
 }
 
 pub const ERRCODE_EXTERNAL_ROUTINE_EXCEPTION: c_int = make_sqlstate('3', '8', '0', '0', '0');
+pub const ERRCODE_FEATURE_NOT_SUPPORTED: c_int = make_sqlstate('0','A','0','0','0');
+
 
 extern "C" {
     #[allow(dead_code)]
