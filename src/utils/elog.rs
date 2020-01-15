@@ -14,7 +14,7 @@ pub struct ErrorContextCallback {
 #[macro_export]
 macro_rules! elog {
     ($elevel:expr, $($args:expr),+) => {
-        ereport!($elevel, (errmsg($($args),+)));
+        ereport!($elevel, errmsg($($args),+));
     };
 }
 
