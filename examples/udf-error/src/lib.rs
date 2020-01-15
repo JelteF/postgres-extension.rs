@@ -38,10 +38,10 @@ fn udf_divzero(_fcinfo: FunctionCallInfo) -> Datum {
 fn udf_error(_fcinfo: FunctionCallInfo) -> Datum {
     let _foo = Foo {s: "udf_error"};
     ereport!(ERROR,
-             (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-              errmsg("test error: {}", ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-              errhint("asdf"),
-              errdetail("{} {} {}",1,2,3))
+             errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+             errmsg("test error: {}", ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+             errhint("asdf"),
+             errdetail("{} {} {}",1,2,3),
     );
     return 1;
 }

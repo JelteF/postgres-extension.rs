@@ -20,7 +20,7 @@ macro_rules! elog {
 
 #[macro_export]
 macro_rules! ereport {
-    ($elevel:expr, ($($kind:tt($($args:expr),*)),+)) => {
+    ($elevel:expr, $($kind:tt($($args:expr),*)),+$(,)?) => {
         unsafe {
             use postgres_extension::utils::elog;
             use postgres_extension::rust_utils::PanicType;
