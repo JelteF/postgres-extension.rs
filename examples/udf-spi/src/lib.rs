@@ -3,10 +3,10 @@ extern crate postgres_extension as pgx;
 #[macro_use]
 extern crate postgres_extension_macro;
 
-use pgx::utils::elog::*;
+use pgx::executor::spi::*;
 use pgx::fmgr::*;
 use pgx::postgres::*;
-use pgx::executor::spi::*;
+use pgx::utils::elog::*;
 
 pg_module_magic!();
 
@@ -22,7 +22,7 @@ impl Drop for Foo {
 
 #[pg_export(V1)]
 fn udf_spi(_fcinfo: FunctionCallInfo) -> Datum {
-    let _foo = Foo {s: "udf_spi"};
+    let _foo = Foo { s: "udf_spi" };
     let query = "select * from foo";
     let spi = spi_connect();
     let result = spi.execute(query, false).unwrap();

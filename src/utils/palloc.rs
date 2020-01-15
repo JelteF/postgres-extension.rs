@@ -1,5 +1,4 @@
-
-use crate::utils::memutils::{MemoryContext, CurrentMemoryContext};
+use crate::utils::memutils::{CurrentMemoryContext, MemoryContext};
 
 pub unsafe fn MemoryContextSwitchTo(context: MemoryContext) -> MemoryContext {
     let old = CurrentMemoryContext;

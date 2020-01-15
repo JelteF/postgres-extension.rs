@@ -1,18 +1,17 @@
-
 use std::alloc::{GlobalAlloc, Layout};
 use std::cmp;
+use std::ffi::CString;
 use std::fmt;
 use std::io;
-use std::io::{Error,ErrorKind,Result};
+use std::io::{Error, ErrorKind, Result};
 use std::mem;
-use std::ffi::CString;
 
 use crate::utils::elog::*;
-use crate::utils::memutils::*;
 use crate::utils::memutils::c::*;
+use crate::utils::memutils::*;
 use crate::utils::palloc::*;
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub enum PanicType {
     ReThrow,
     Errfinish,
@@ -27,13 +26,11 @@ static mut RUST_ERROR_CONTEXT: MemoryContext = std::ptr::null_mut();
 #[macro_export]
 macro_rules! rust_panic_handler {
     ($e:expr) => {{
-        use postgres_extension::utils::elog;
         use postgres_extension::rust_utils;
+        use postgres_extension::utils::elog;
 
         rust_utils::init_error_handling();
-        let result = std::panic::catch_unwind(|| {
-            $e
-        });
+        let result = std::panic::catch_unwind(|| $e);
 
         let panictype = match result {
             Ok(val) => return val,
@@ -48,42 +45,38 @@ macro_rules! rust_panic_handler {
         };
 
         unreachable!();
-    }}
+    }};
 }
 
 #[macro_export]
 macro_rules! longjmp_panic {
-    ($e:expr) => {
-        {
-            #[allow(unused_unsafe)]
-            unsafe {
-                let retval;
-                use std::mem::MaybeUninit;
-                use $crate::utils::elog
-                    ::{PG_exception_stack,
-                       error_context_stack,
-                       ErrorContextCallback};
-                use $crate::rust_utils::PanicType;
-                use $crate::setjmp::{sigsetjmp,sigjmp_buf};
-                let save_exception_stack: *mut sigjmp_buf = PG_exception_stack;
-                let save_context_stack: *mut ErrorContextCallback = error_context_stack;
-                let mut local_sigjmp_buf_uninit: MaybeUninit<sigjmp_buf> =
-                    MaybeUninit::uninit();
-                if sigsetjmp(local_sigjmp_buf_uninit.as_mut_ptr(), 0) == 0 {
-                    let mut local_sigjmp_buf = local_sigjmp_buf_uninit.assume_init();
-                    PG_exception_stack = &mut local_sigjmp_buf;
-                    retval = $e;
-                } else {
-                    PG_exception_stack = save_exception_stack;
-                    error_context_stack = save_context_stack;
-                    panic!(PanicType::ReThrow);
-                }
+    ($e:expr) => {{
+        #[allow(unused_unsafe)]
+        unsafe {
+            let retval;
+            use std::mem::MaybeUninit;
+            use $crate::rust_utils::PanicType;
+            use $crate::setjmp::{sigjmp_buf, sigsetjmp};
+            use $crate::utils::elog::{
+                error_context_stack, ErrorContextCallback, PG_exception_stack,
+            };
+            let save_exception_stack: *mut sigjmp_buf = PG_exception_stack;
+            let save_context_stack: *mut ErrorContextCallback = error_context_stack;
+            let mut local_sigjmp_buf_uninit: MaybeUninit<sigjmp_buf> = MaybeUninit::uninit();
+            if sigsetjmp(local_sigjmp_buf_uninit.as_mut_ptr(), 0) == 0 {
+                let mut local_sigjmp_buf = local_sigjmp_buf_uninit.assume_init();
+                PG_exception_stack = &mut local_sigjmp_buf;
+                retval = $e;
+            } else {
                 PG_exception_stack = save_exception_stack;
                 error_context_stack = save_context_stack;
-                retval
+                panic!(PanicType::ReThrow);
             }
+            PG_exception_stack = save_exception_stack;
+            error_context_stack = save_context_stack;
+            retval
         }
-    }
+    }};
 }
 
 fn init_rust_memory_context() {
@@ -93,7 +86,9 @@ fn init_rust_memory_context() {
                 TopMemoryContext,
                 "Rust Memory Context\0".as_ptr() as *const i8,
                 ALLOCSET_DEFAULT_MINSIZE,
-                ALLOCSET_DEFAULT_INITSIZE, ALLOCSET_DEFAULT_MAXSIZE);
+                ALLOCSET_DEFAULT_INITSIZE,
+                ALLOCSET_DEFAULT_MAXSIZE,
+            );
         }
     }
 }
@@ -105,7 +100,9 @@ pub fn init_error_handling() {
                 TopMemoryContext,
                 "Rust Error Context\0".as_ptr() as *const i8,
                 ALLOCSET_DEFAULT_MINSIZE,
-                ALLOCSET_DEFAULT_INITSIZE, ALLOCSET_DEFAULT_MAXSIZE);
+                ALLOCSET_DEFAULT_INITSIZE,
+                ALLOCSET_DEFAULT_MAXSIZE,
+            );
 
             let oldcontext = MemoryContextSwitchTo(RUST_ERROR_CONTEXT);
             std::panic::set_hook(Box::new(|_| {
@@ -118,17 +115,16 @@ pub fn init_error_handling() {
 
 pub fn handle_panic(payload: Box<dyn std::any::Any>) -> PanicType {
     if let Some(panictype) = payload.downcast_ref::<PanicType>() {
-        return *panictype
+        return *panictype;
     }
 
-    let panic_message =
-        if let Some(s) = payload.downcast_ref::<&str>() {
-            s
-        } else if let Some(s) = payload.downcast_ref::<String>() {
-            &s[..]
-        } else {
-            "Box<Any>"
-        };
+    let panic_message = if let Some(s) = payload.downcast_ref::<&str>() {
+        s
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        &s[..]
+    } else {
+        "Box<Any>"
+    };
 
     let message = format!("rust panic: {}", panic_message);
     let hint = "find out what rust code caused the panic";
@@ -156,8 +152,12 @@ pub trait Write {
     fn write_all(&mut self, mut buf: &[u8]) -> Result<()> {
         while !buf.is_empty() {
             match self.write(buf) {
-                Ok(0) => return Err(Error::new(ErrorKind::WriteZero,
-                                               "failed to write whole buffer")),
+                Ok(0) => {
+                    return Err(Error::new(
+                        ErrorKind::WriteZero,
+                        "failed to write whole buffer",
+                    ))
+                }
                 Ok(n) => buf = &buf[n..],
                 Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
                 Err(e) => return Err(e),
@@ -185,7 +185,10 @@ pub trait Write {
             }
         }
 
-        let mut output = Adaptor { inner: self, error: Ok(()) };
+        let mut output = Adaptor {
+            inner: self,
+            error: Ok(()),
+        };
         match fmt::write(&mut output, fmt) {
             Ok(()) => Ok(()),
             Err(..) => {
@@ -198,7 +201,12 @@ pub trait Write {
             }
         }
     }
-    fn by_ref(&mut self) -> &mut Self where Self: Sized { self }
+    fn by_ref(&mut self) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self
+    }
 }
 
 impl<'a> Write for &'a mut [i8] {
@@ -217,12 +225,17 @@ impl<'a> Write for &'a mut [i8] {
         if self.write(data)? == data.len() {
             Ok(())
         } else {
-            Err(Error::new(ErrorKind::WriteZero, "failed to write whole buffer"))
+            Err(Error::new(
+                ErrorKind::WriteZero,
+                "failed to write whole buffer",
+            ))
         }
     }
 
     #[inline]
-    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 unsafe impl GlobalAlloc for PostgresAllocator {

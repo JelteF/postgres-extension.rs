@@ -4,10 +4,10 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
+use proc_macro::{TokenStream, TokenTree};
 use syn::export::Span;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
-use proc_macro::{TokenStream,TokenTree};
 
 /// Attribute macro does the following:
 ///
@@ -28,8 +28,8 @@ pub fn pg_export(args: TokenStream, input: TokenStream) -> TokenStream {
         nargs += 1;
         if let TokenTree::Ident(ident) = opt {
             match ident.to_string().as_ref() {
-                "V1" => { opt_v1 = true },
-                "C" => { opt_v1 = false },
+                "V1" => opt_v1 = true,
+                "C" => opt_v1 = false,
                 s => panic!("invalid option: {}", s),
             }
         } else {
@@ -106,25 +106,15 @@ pub fn pg_export(args: TokenStream, input: TokenStream) -> TokenStream {
     output
 }
 
-fn params_to_arglist(params: &Punctuated<syn::FnArg, Comma>) -> Punctuated<&syn::Ident,Comma> {
-    let argnames = params.iter().map(|arg| {
-        match *arg {
-            syn::FnArg::SelfRef(_) | syn::FnArg::SelfValue(_) => {
-                panic!("self functions not supported")
-            }
-            syn::FnArg::Inferred(_) => {
-                panic!("inferred function parameters not supported")
-            }
-            syn::FnArg::Captured(ref captured) => {
-                match &captured.pat {
-                    syn::Pat::Ident(patident) => &patident.ident,
-                    _ => panic!("non-ident args not supported"),
-                }
-            },
-            syn::FnArg::Ignored(_) => {
-                panic!("ignored function args not supported")
-            }
-        }
+fn params_to_arglist(params: &Punctuated<syn::FnArg, Comma>) -> Punctuated<&syn::Ident, Comma> {
+    let argnames = params.iter().map(|arg| match *arg {
+        syn::FnArg::SelfRef(_) | syn::FnArg::SelfValue(_) => panic!("self functions not supported"),
+        syn::FnArg::Inferred(_) => panic!("inferred function parameters not supported"),
+        syn::FnArg::Captured(ref captured) => match &captured.pat {
+            syn::Pat::Ident(patident) => &patident.ident,
+            _ => panic!("non-ident args not supported"),
+        },
+        syn::FnArg::Ignored(_) => panic!("ignored function args not supported"),
     });
 
     let mut arglist = Punctuated::new();

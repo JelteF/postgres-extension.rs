@@ -1,5 +1,5 @@
-use libc::*;
 use crate::postgres::*;
+use libc::*;
 
 pub const BGWORKER_SHMEM_ACCESS: c_int = 0x0001;
 pub const BGWORKER_BACKEND_DATABASE_CONNECTION: c_int = 0x0002;
@@ -19,7 +19,7 @@ pub struct BackgroundWorker {
     pub bgw_type: [c_char; BGW_MAXLEN],
     pub bgw_flags: c_int,
     pub bgw_start_time: BgWorkerStartTime,
-    pub bgw_restart_time: c_int,   /* in seconds, or BGW_NEVER_RESTART */
+    pub bgw_restart_time: c_int, /* in seconds, or BGW_NEVER_RESTART */
     pub bgw_library_name: [c_char; BGW_MAXLEN],
     pub bgw_function_name: [c_char; BGW_MAXLEN],
     pub bgw_main_arg: Datum,
@@ -32,5 +32,8 @@ extern "C" {
     pub fn BackgroundWorkerBlockSignals();
     pub fn BackgroundWorkerUnblockSignals();
     pub fn BackgroundWorkerInitializeConnection(
-        dbname: *const c_char, username: *const c_char, flags: u32);
+        dbname: *const c_char,
+        username: *const c_char,
+        flags: u32,
+    );
 }

@@ -15,9 +15,9 @@ pub struct sigjmp_buf {
 }
 
 extern "C" {
-    #[link_name="setjmp"]
+    #[link_name = "setjmp"]
     pub fn setjmp(env: *mut jmp_buf) -> c_int;
-    #[link_name="__sigsetjmp"]
+    #[link_name = "__sigsetjmp"]
     pub fn sigsetjmp(env: *mut sigjmp_buf, savesigs: c_int) -> c_int;
     pub fn longjmp(env: *mut jmp_buf, val: c_int) -> c_void;
     pub fn siglongjmp(env: *mut sigjmp_buf, val: c_int) -> c_void;

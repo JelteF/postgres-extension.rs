@@ -1,4 +1,3 @@
-
 extern "C" {
     pub fn SetCurrentStatementStartTimestamp();
     pub fn StartTransactionCommand();

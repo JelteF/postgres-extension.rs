@@ -8,15 +8,15 @@ use std::net::SocketAddr;
 
 use pgx::access::xact::*;
 use pgx::executor::spi::*;
-use pgx::rust_utils::Write;
 use pgx::postmaster::bgworker::*;
-use pgx::utils::palloc::*;
-use pgx::utils::memutils::*;
+use pgx::rust_utils::Write;
 use pgx::utils::memutils::c::*;
+use pgx::utils::memutils::*;
+use pgx::utils::palloc::*;
 
+use tokio::io::{lines, write_all};
 use tokio::net::TcpListener;
 use tokio::prelude::*;
-use tokio::io::{lines,write_all};
 
 use std::io::BufReader;
 
@@ -32,9 +32,7 @@ pub fn process_request(line: String) -> Vec<u8> {
     }
     let mut s = String::new();
     let spi = spi_connect();
-    let catch = std::panic::catch_unwind(|| {
-        spi.execute(&line, false).unwrap()
-    });
+    let catch = std::panic::catch_unwind(|| spi.execute(&line, false).unwrap());
     match catch {
         Ok(res) => {
             for tuple in res.iter() {
@@ -46,7 +44,7 @@ pub fn process_request(line: String) -> Vec<u8> {
                 s.push_str(")\n");
             }
             s.push_str("}\n");
-        },
+        }
         Err(_e) => {
             s.push_str("ERROR\n");
         }
@@ -77,10 +75,10 @@ pub extern "C" fn _PG_init() {
         bgw_extra: [0; BGW_EXTRALEN],
         bgw_notify_pid: 0,
     };
-    write!(&mut worker.bgw_name[0..],"rust bgworker name").unwrap();
-    write!(&mut worker.bgw_type[0..],"rust bgworker type").unwrap();
-    write!(&mut worker.bgw_library_name[0..],"libbgworker_spi").unwrap();
-    write!(&mut worker.bgw_function_name[0..],"bgw_main").unwrap();
+    write!(&mut worker.bgw_name[0..], "rust bgworker name").unwrap();
+    write!(&mut worker.bgw_type[0..], "rust bgworker type").unwrap();
+    write!(&mut worker.bgw_library_name[0..], "libbgworker_spi").unwrap();
+    write!(&mut worker.bgw_function_name[0..], "bgw_main").unwrap();
     unsafe {
         RegisterBackgroundWorker(&worker);
     }
@@ -88,7 +86,6 @@ pub extern "C" fn _PG_init() {
 
 #[no_mangle]
 pub extern "C" fn bgw_main() {
-
     unsafe {
         BackgroundWorkerUnblockSignals();
 
@@ -97,9 +94,12 @@ pub extern "C" fn bgw_main() {
 
         let cxt_name = CString::new("bgworker-spi context").unwrap();
         BGWORKER_SPI_CONTEXT = AllocSetContextCreateInternal(
-            CurrentMemoryContext, cxt_name.as_ptr(),
+            CurrentMemoryContext,
+            cxt_name.as_ptr(),
             ALLOCSET_DEFAULT_MINSIZE,
-            ALLOCSET_DEFAULT_INITSIZE, ALLOCSET_DEFAULT_MAXSIZE);
+            ALLOCSET_DEFAULT_INITSIZE,
+            ALLOCSET_DEFAULT_MAXSIZE,
+        );
     }
 
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:8080".to_string());
@@ -113,11 +113,9 @@ pub extern "C" fn bgw_main() {
     let server = listener
         .incoming()
         .for_each(move |socket| {
-            let (reader,writer) = socket.split();
+            let (reader, writer) = socket.split();
             let lines = lines(BufReader::new(reader));
-            let responses = lines.map(move |line| {
-                process_request(line)
-            });
+            let responses = lines.map(move |line| process_request(line));
 
             let writes = responses.fold(writer, |writer, response| {
                 write_all(writer, response).map(|(w, _)| w)

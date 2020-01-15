@@ -11,8 +11,8 @@ pg_module_magic!();
 
 extern "C" {
     fn int4div(fcinfo: FunctionCallInfo) -> Datum;
-    fn DirectFunctionCall2Coll(func: PGFunction, collation: Oid,
-                               arg1: Datum, arg2: Datum) -> Datum;
+    fn DirectFunctionCall2Coll(func: PGFunction, collation: Oid, arg1: Datum, arg2: Datum)
+        -> Datum;
 }
 
 struct Foo {
@@ -27,27 +27,26 @@ impl Drop for Foo {
 
 #[pg_export(V1)]
 fn udf_divzero(_fcinfo: FunctionCallInfo) -> Datum {
-    let _foo = Foo {s: "udf_divzero"};
-    longjmp_panic!(
-        DirectFunctionCall2Coll(int4div, InvalidOid, 1, 0)
-    );
+    let _foo = Foo { s: "udf_divzero" };
+    longjmp_panic!(DirectFunctionCall2Coll(int4div, InvalidOid, 1, 0));
     return 0;
 }
 
 #[pg_export(V1)]
 fn udf_error(_fcinfo: FunctionCallInfo) -> Datum {
-    let _foo = Foo {s: "udf_error"};
-    ereport!(ERROR,
-             errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-             errmsg("test error: {}", ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-             errhint("asdf"),
-             errdetail("{} {} {}",1,2,3),
+    let _foo = Foo { s: "udf_error" };
+    ereport!(
+        ERROR,
+        errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+        errmsg("test error: {}", ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+        errhint("asdf"),
+        errdetail("{} {} {}", 1, 2, 3),
     );
     return 1;
 }
 
 #[pg_export(V1)]
 fn udf_panic(_fcinfo: FunctionCallInfo) -> Datum {
-    let _foo = Foo {s: "udf_panic"};
+    let _foo = Foo { s: "udf_panic" };
     panic!("rust panic")
 }

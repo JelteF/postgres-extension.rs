@@ -1,8 +1,9 @@
-
 use libc::*;
 
 #[repr(C)]
-pub struct MemoryContextData { _unused: [u8; 0] } // opaque
+pub struct MemoryContextData {
+    _unused: [u8; 0],
+} // opaque
 
 pub type MemoryContext = *mut MemoryContextData;
 
@@ -22,8 +23,12 @@ pub mod c {
         pub fn MemoryContextAlloc(context: MemoryContext, size: usize) -> *mut u8;
         pub fn MemoryContextReset(context: MemoryContext);
         pub fn AllocSetContextCreateInternal(
-            parent: MemoryContext, name: *const c_char, minContextSize: size_t,
-            initBlockSize: size_t, maxBlockSize: size_t) -> MemoryContext;
+            parent: MemoryContext,
+            name: *const c_char,
+            minContextSize: size_t,
+            initBlockSize: size_t,
+            maxBlockSize: size_t,
+        ) -> MemoryContext;
         pub fn pfree(ptr: *mut u8) -> ();
     }
 }

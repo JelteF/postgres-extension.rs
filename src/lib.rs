@@ -16,9 +16,9 @@ pub mod c;
 pub mod executor;
 pub mod fmgr;
 pub mod pg_config;
-pub mod postmaster;
 pub mod postgres;
 pub mod postgres_ext;
+pub mod postmaster;
 pub mod utils;
 
 #[global_allocator]
