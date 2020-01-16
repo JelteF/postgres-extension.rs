@@ -42,7 +42,10 @@ fn main() {
         // The input header we would like to generate
         // bindings for.
         .header("wrapper.h")
+        // ignore macros that cause errors
         .parse_callbacks(Box::new(ignored_macros))
+        // derive Default on the structs
+        .derive_default(true)
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         //.parse_callbacks(Box::new(bindgen::CargoCallbacks))
