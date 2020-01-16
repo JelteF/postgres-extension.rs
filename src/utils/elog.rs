@@ -1,15 +1,17 @@
 #![macro_use]
 #![allow(non_snake_case)]
 
-use crate::setjmp::*;
-use libc::*;
+use crate::setjmp::sigjmp_buf;
 
-#[repr(C)]
-pub struct ErrorContextCallback {
-    previous: *mut ErrorContextCallback,
-    callback: extern "C" fn(arg: *mut c_void),
-    arg: *mut c_void,
-}
+use libc::*;
+pub use pgsys::{elog_finish, elog_start, errfinish, errstart, pg_re_throw};
+pub use pgsys::{errcode, errdetail, errhint, errmsg};
+pub use pgsys::{
+    DEBUG1, DEBUG2, DEBUG3, DEBUG4, DEBUG5, ERROR, FATAL, INFO, LOG, NOTICE, PANIC, WARNING,
+};
+
+// TODO: Don't re-export these, currently they are used by longjmp_panic!
+pub use pgsys::{error_context_stack, ErrorContextCallback};
 
 #[macro_export]
 macro_rules! elog {
@@ -25,7 +27,7 @@ macro_rules! ereport {
             use postgres_extension::utils::elog;
             use postgres_extension::rust_utils::PanicType;
 
-            if elog::pg_errstart($elevel, file!(), line!()) {
+            if elog::pg_errstart($elevel as i32, file!(), line!()) {
 
                 $(
                     pg_errfmt!($kind,$($args),+);
@@ -53,8 +55,6 @@ macro_rules! pg_errfmt {
     }
 }
 
-type c_bool = c_char;
-
 pub unsafe fn pg_errstart(elevel: i32, _filename: &str, lineno: u32) -> bool {
     //TODO: find a way to make a constant c string out of file!()
     let cfilename = std::ptr::null::<c_char>();
@@ -62,45 +62,8 @@ pub unsafe fn pg_errstart(elevel: i32, _filename: &str, lineno: u32) -> bool {
     let cfuncname = std::ptr::null::<c_char>();
     let cdomain = std::ptr::null::<c_char>();
 
-    let result = errstart(elevel, cfilename, clineno, cfuncname, cdomain);
-
-    if result == 0 {
-        return false;
-    } else {
-        return true;
-    }
+    return errstart(elevel, cfilename, clineno, cfuncname, cdomain);
 }
-
-extern "C" {
-    pub fn elog_start(filename: *const c_char, lineno: c_int, funcname: *const c_char) -> ();
-    pub fn elog_finish(elevel: c_int, fmt: *const c_char, ...) -> ();
-    pub fn pg_re_throw() -> !;
-    pub fn errstart(
-        elevel: c_int,
-        filename: *const c_char,
-        lineno: c_int,
-        funcname: *const c_char,
-        domain: *const c_char,
-    ) -> c_bool;
-    pub fn errfinish(dummy: c_int, ...);
-    pub fn errmsg(fmt: *const c_char, ...) -> c_int;
-    pub fn errdetail(fmt: *const c_char, ...) -> c_int;
-    pub fn errhint(fmt: *const c_char, ...) -> c_int;
-    pub fn errcode(sqlerrcode: c_int) -> c_int;
-}
-
-pub const DEBUG5: i32 = 10;
-pub const DEBUG4: i32 = 11;
-pub const DEBUG3: i32 = 12;
-pub const DEBUG2: i32 = 13;
-pub const DEBUG1: i32 = 14;
-pub const LOG: i32 = 15;
-pub const INFO: i32 = 17;
-pub const NOTICE: i32 = 18;
-pub const WARNING: i32 = 19;
-pub const ERROR: i32 = 20;
-pub const FATAL: i32 = 21;
-pub const PANIC: i32 = 22;
 
 pub const TEXTDOMAIN: *const c_char = std::ptr::null::<c_char>();
 
@@ -116,11 +79,9 @@ const fn make_sqlstate(ch1: char, ch2: char, ch3: char, ch4: char, ch5: char) ->
 }
 
 pub const ERRCODE_EXTERNAL_ROUTINE_EXCEPTION: c_int = make_sqlstate('3', '8', '0', '0', '0');
-pub const ERRCODE_FEATURE_NOT_SUPPORTED: c_int = make_sqlstate('0','A','0','0','0');
 
+pub const ERRCODE_FEATURE_NOT_SUPPORTED: c_int = make_sqlstate('0', 'A', '0', '0', '0');
 
 extern "C" {
-    #[allow(dead_code)]
     pub static mut PG_exception_stack: *mut sigjmp_buf;
-    pub static mut error_context_stack: *mut ErrorContextCallback;
 }

@@ -135,7 +135,7 @@ pub fn handle_panic(payload: Box<dyn std::any::Any>) -> PanicType {
     let cdetail = CString::new(detail).unwrap();
 
     unsafe {
-        pg_errstart(ERROR, file!(), line!());
+        pg_errstart(ERROR as i32, file!(), line!());
         errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION);
         errmsg(cmessage.as_ptr());
         errhint(chint.as_ptr());

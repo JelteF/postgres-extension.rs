@@ -1,0 +1,16 @@
+#include "postgres.h"
+
+#include "miscadmin.h"
+
+#include "access/multixact.h"
+#include "access/relscan.h"
+#include "access/tableam.h"
+#include "catalog/catalog.h"
+#include "catalog/storage.h"
+#include "catalog/index.h"
+#include "catalog/pg_type.h"
+#include "executor/executor.h"
+#include "executor/tuptable.h"
+#include "utils/builtins.h"
+#include "utils/rel.h"
+#include "storage/bufmgr.h"

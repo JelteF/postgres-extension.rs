@@ -9,6 +9,7 @@ repository = "https://github.com/jeff-davis/postgres-extension.rs"
 
 [dependencies]
 libc = "0.2.47"
+postgres-sys = { path = "postgres-sys" }
 
 [profile.dev]
 panic = "unwind"

@@ -4,6 +4,7 @@
 
 // dependencies
 extern crate libc;
+extern crate postgres_sys as pgsys;
 
 // rust modules
 #[macro_use]
