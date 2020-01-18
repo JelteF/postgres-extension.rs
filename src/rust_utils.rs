@@ -24,6 +24,18 @@ pub struct PostgresAllocator;
 static mut RUST_MEMORY_CONTEXT: MemoryContext = std::ptr::null_mut();
 static mut RUST_ERROR_CONTEXT: MemoryContext = std::ptr::null_mut();
 
+#[derive(Default, Clone)]
+pub struct PanicLocation {
+    pub valid: bool,
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+use std::cell::RefCell;
+thread_local! {
+    pub static panic_location: RefCell<PanicLocation> = RefCell::new(PanicLocation::default());
+}
 #[macro_export]
 macro_rules! rust_panic_handler {
     ($e:expr) => {{
@@ -31,7 +43,25 @@ macro_rules! rust_panic_handler {
         use postgres_extension::utils::elog;
 
         rust_utils::init_error_handling();
-        let result = std::panic::catch_unwind(|| $e);
+        std::panic::set_hook(Box::new(|panic_info| {
+            if let Some(location) = panic_info.location() {
+                rust_utils::panic_location.with(|l| {
+                    let mut l = l.borrow_mut();
+                    l.file = location.file().to_string();
+                    l.line = location.line();
+                    l.column = location.column();
+                    l.valid = true;
+                })
+            } else {
+                rust_utils::panic_location.with(|l| {
+                    let mut l = l.borrow_mut();
+                    l.valid = false
+                })
+            };
+        }));
+
+        let result = unsafe { std::panic::catch_unwind(|| $e) };
+        let _ = std::panic::take_hook();
 
         let panictype = match result {
             Ok(val) => return val,
@@ -128,18 +158,22 @@ pub fn handle_panic(payload: Box<dyn std::any::Any>) -> PanicType {
     };
 
     let message = format!("rust panic: {}", panic_message);
-    let hint = "find out what rust code caused the panic";
-    let detail = "some rust code caused a panic";
+    let detail = panic_location.with(|l| {
+        let l = l.borrow();
+        if l.valid {
+            format!("panic occured in {} at {}:{}", l.file, l.line, l.column)
+        } else {
+            String::from("Location of panic could not be found")
+        }
+    });
 
     let cmessage = CString::new(message.as_str()).unwrap();
-    let chint = CString::new(hint).unwrap();
     let cdetail = CString::new(detail).unwrap();
 
     unsafe {
         pg_errstart(ERROR as i32, file!(), line!());
         errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION);
         errmsg(cmessage.as_ptr());
-        errhint(chint.as_ptr());
         errdetail(cdetail.as_ptr());
     }
 
