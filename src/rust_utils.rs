@@ -1,5 +1,6 @@
 use std::alloc::{GlobalAlloc, Layout};
 use std::cmp;
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::fmt;
 use std::io;
@@ -85,9 +86,9 @@ fn init_rust_memory_context() {
             RUST_MEMORY_CONTEXT = AllocSetContextCreateInternal(
                 TopMemoryContext,
                 "Rust Memory Context\0".as_ptr() as *const i8,
-                ALLOCSET_DEFAULT_MINSIZE,
-                ALLOCSET_DEFAULT_INITSIZE,
-                ALLOCSET_DEFAULT_MAXSIZE,
+                ALLOCSET_DEFAULT_MINSIZE.try_into().unwrap(),
+                ALLOCSET_DEFAULT_INITSIZE.try_into().unwrap(),
+                ALLOCSET_DEFAULT_MAXSIZE.try_into().unwrap(),
             );
         }
     }
@@ -99,9 +100,9 @@ pub fn init_error_handling() {
             RUST_ERROR_CONTEXT = AllocSetContextCreateInternal(
                 TopMemoryContext,
                 "Rust Error Context\0".as_ptr() as *const i8,
-                ALLOCSET_DEFAULT_MINSIZE,
-                ALLOCSET_DEFAULT_INITSIZE,
-                ALLOCSET_DEFAULT_MAXSIZE,
+                ALLOCSET_DEFAULT_MINSIZE.try_into().unwrap(),
+                ALLOCSET_DEFAULT_INITSIZE.try_into().unwrap(),
+                ALLOCSET_DEFAULT_MAXSIZE.try_into().unwrap(),
             );
 
             let oldcontext = MemoryContextSwitchTo(RUST_ERROR_CONTEXT);
